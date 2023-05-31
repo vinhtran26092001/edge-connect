@@ -134,7 +134,11 @@ class EdgeModel(BaseModel):
         return outputs, gen_loss, dis_loss, logs
 
     def forward(self, images, edges, masks):
+        # images = images.transpose(-1, -2)
         edges_masked = (edges * (1 - masks))
+        # print(images.shape)
+        # print(masks.shape)
+        # print(edges.shape)
         images_masked = (images * (1 - masks)) + masks
         inputs = torch.cat((images_masked, edges_masked, masks), dim=1)
         outputs = self.generator(inputs)                                    # in: [grayscale(1) + edge(1) + mask(1)]
@@ -247,7 +251,11 @@ class InpaintingModel(BaseModel):
         return outputs, gen_loss, dis_loss, logs
 
     def forward(self, images, edges, masks):
+        # images = images.transpose(-1, -2)
         images_masked = (images * (1 - masks).float()) + masks
+        # print(images_masked.shape)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+        # print(images.shape)
+        # print(edges.shape)
         inputs = torch.cat((images_masked, edges), dim=1)
         outputs = self.generator(inputs)                                    # in: [rgb(3) + edge(1)]
         return outputs

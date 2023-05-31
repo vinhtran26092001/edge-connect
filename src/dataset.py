@@ -7,10 +7,12 @@ import numpy as np
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
 from PIL import Image
-from scipy.misc import imread
+# from scipy.misc import imread
+import cv2
 from skimage.feature import canny
 from skimage.color import rgb2gray, gray2rgb
 from .utils import create_mask
+import matplotlib.pyplot as plt
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -54,8 +56,9 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        img = imread(self.data[index])
-
+        img = cv2.imread(self.data[index])
+        # print(img.shape)
+ 
         # gray to rgb
         if len(img.shape) < 3:
             img = gray2rgb(img)
@@ -69,10 +72,10 @@ class Dataset(torch.utils.data.Dataset):
 
         # load mask
         mask = self.load_mask(img, index)
-
+        mask = mask.T
+        # print(mask.shape)
         # load edge
         edge = self.load_edge(img_gray, index, mask)
-
         # augment data
         if self.augment and np.random.binomial(1, 0.5) > 0:
             img = img[:, ::-1, ...]
@@ -84,6 +87,9 @@ class Dataset(torch.utils.data.Dataset):
 
     def load_edge(self, img, index, mask):
         sigma = self.sigma
+        # mask = mask.T
+        # print(mask.shape)
+        # print(img.shape)
 
         # in test mode images are masked (with masked regions),
         # using 'mask' parameter prevents canny to detect edges for the masked regions
@@ -104,12 +110,12 @@ class Dataset(torch.utils.data.Dataset):
         # external
         else:
             imgh, imgw = img.shape[0:2]
-            edge = imread(self.edge_data[index])
+            edge = cv2.imread(self.edge_data[index])
             edge = self.resize(edge, imgh, imgw)
 
             # non-max suppression
             if self.nms == 1:
-                edge = edge * canny(img, sigma=sigma, mask=mask)
+                edge = edge * canny(img.T, sigma=sigma, mask=mask)
 
             return edge
 
@@ -137,14 +143,14 @@ class Dataset(torch.utils.data.Dataset):
         # external
         if mask_type == 3:
             mask_index = random.randint(0, len(self.mask_data) - 1)
-            mask = imread(self.mask_data[mask_index])
+            mask = cv2.imread(self.mask_data[mask_index])
             mask = self.resize(mask, imgh, imgw)
             mask = (mask > 0).astype(np.uint8) * 255       # threshold due to interpolation
             return mask
 
         # test mode: load mask non random
         if mask_type == 6:
-            mask = imread(self.mask_data[index])
+            mask =  cv2.imread(self.mask_data[index])
             mask = self.resize(mask, imgh, imgw, centerCrop=False)
             mask = rgb2gray(mask)
             mask = (mask > 0).astype(np.uint8) * 255
@@ -165,7 +171,7 @@ class Dataset(torch.utils.data.Dataset):
             i = (imgw - side) // 2
             img = img[j:j + side, i:i + side, ...]
 
-        img = scipy.misc.imresize(img, [height, width])
+        img = cv2.resize(img, (height, width))
 
         return img
 
